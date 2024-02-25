@@ -1,9 +1,11 @@
 package dev.limebeck.activemqApp
 
+import com.fasterxml.jackson.module.kotlin.readValue
 import dev.limebeck.kodein.KodeinVerticleFactory
 import dev.limebeck.kodein.asKodeinVerticleName
 import dev.limebeck.koinVerticleFactory.KoinVerticleFactory
 import dev.limebeck.koinVerticleFactory.asKoinVerticleName
+import io.vertx.core.ThreadingModel
 import io.vertx.core.Vertx
 import io.vertx.kotlin.core.deploymentOptionsOf
 import io.vertx.kotlin.core.vertxOptionsOf
@@ -11,15 +13,21 @@ import io.vertx.kotlin.coroutines.coAwait
 import io.vertx.kotlin.coroutines.dispatcher
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.kodein.di.DI
 import org.kodein.di.bindFactory
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
+import java.time.Duration
+import java.time.Instant
+
+class MainClass
+
+val logger = MainClass::class.logger()
 
 fun main(args: Array<String>) {
     val vertx = Vertx.vertx(
         vertxOptionsOf(
-            eventLoopPoolSize = 20,
             preferNativeTransport = true,
             haEnabled = true
         )
@@ -28,15 +36,18 @@ fun main(args: Array<String>) {
     val eb = vertx.eventBus()
 
     val di = DI {
+        val counter = vertx.sharedData().getCounter("KodeinModule")
         bindFactory<Unit, EventBusConsumerVerticle> {
-            EventBusConsumerVerticle("test")
+            val verticleNumber = runBlocking { counter.coAwait().getAndIncrement().coAwait() }
+            EventBusConsumerVerticle("Kodein:$verticleNumber")
         }
     }
 
     val ebConsumerModule = module {
+        val counter = vertx.sharedData().getCounter("KoinModule")
         factory {
-            println("<b1ba2485> Initialize factory")
-            EventBusConsumerVerticle("test")
+            val verticleNumber = runBlocking { counter.coAwait().getAndIncrement().coAwait() }
+            EventBusConsumerVerticle("Koin:$verticleNumber")
         }
     }
 
@@ -48,7 +59,8 @@ fun main(args: Array<String>) {
     vertx.deployVerticle(
         EventBusConsumerVerticle::class.java.asKoinVerticleName(),
         deploymentOptionsOf(
-            instances = 10
+            instances = 1000,
+            threadingModel = ThreadingModel.VIRTUAL_THREAD
         )
     ).onFailure {
         it.printStackTrace()
@@ -58,21 +70,33 @@ fun main(args: Array<String>) {
     vertx.deployVerticle(
         EventBusConsumerVerticle::class.java.asKodeinVerticleName(),
         deploymentOptionsOf(
-            instances = 10
+            instances = 1000,
+            threadingModel = ThreadingModel.VIRTUAL_THREAD
         )
     ).onFailure {
         it.printStackTrace()
     }
 
 //    vertx.deployVerticle(MainHttpVerticle())
-    repeat(300) {
+    repeat(3000) {
         val counter = vertx.sharedData().getCounter("Timer$it")
-        vertx.setPeriodic(2000) { timerId ->
+        vertx.setPeriodic(2) { timerId ->
             GlobalScope.launch(vertx.dispatcher()) {
                 val messNumber = counter.coAwait().getAndIncrement().coAwait()
-                println("<2315ed35> Publish #$messNumber from $timerId")
-                eb.publish("test.test", "Test message #$messNumber from $timerId")
+//                logger.info("<2315ed35> Publish #$messNumber from $timerId")
+                val result = eb.request<String>(
+                    /* address = */ "test.test",
+                    mapper.writeValueAsString(Instant.now())
+                ).coAwait()
+                val body = mapper.readValue<Response>(result.body())
+                logger.info("<de3b0656> $timerId:$messNumber response time: ${Duration.between(body.requestTime, body.responseTime).toNanos()} from ${body.fromWorker}")
             }
         }
     }
 }
+
+data class Response(
+    val requestTime: Instant,
+    val responseTime: Instant,
+    val fromWorker: String
+)

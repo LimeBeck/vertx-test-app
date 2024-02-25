@@ -45,6 +45,8 @@ dependencies {
     implementation("org.kodein.di:kodein-di:7.21.2")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.slf4j:slf4j-api:2.0.10")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.+")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.+")
     implementation(kotlin("stdlib-jdk8"))
     testImplementation("io.vertx:vertx-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
