@@ -13,7 +13,7 @@ class KoinVerticleFactory(
 ) : VerticleFactory {
     companion object {
         const val PREFIX = "koin"
-        val logger = LoggerFactory.getLogger(KoinVerticleFactory::class.java)
+        private val logger = LoggerFactory.getLogger(KoinVerticleFactory::class.java)
     }
 
     override fun prefix(): String = PREFIX
@@ -28,13 +28,8 @@ class KoinVerticleFactory(
         val clazz = classLoader.loadClass(className) ?: Class.forName(className)
         val kotlinClass = Reflection.createKotlinClass(clazz)
 
-        runCatching {
+        promise.complete {
             koin.get<Verticle>(kotlinClass, null)
-        }.onSuccess {
-            promise.complete { it }
-        }.onFailure {
-            logger.error("<57233541> Can`t load $verticleName", it)
-            promise.fail(it)
         }
     }
 }

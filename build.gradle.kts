@@ -42,6 +42,7 @@ dependencies {
     implementation("io.vertx:vertx-micrometer-metrics")
     implementation("io.vertx:vertx-lang-kotlin")
     implementation("io.insert-koin:koin-core:$koin_version")
+    implementation("org.kodein.di:kodein-di:7.21.2")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.slf4j:slf4j-api:2.0.10")
     implementation(kotlin("stdlib-jdk8"))

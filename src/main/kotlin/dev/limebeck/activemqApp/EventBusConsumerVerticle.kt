@@ -11,10 +11,13 @@ class EventBusConsumerVerticle(
 ) : AbstractVerticle() {
     val instanceId = UUID.randomUUID().toString()
 
+//    init {
+//        println("Loaded EventBusConsumerVerticle $instanceId")
+//    }
+
     override fun init(vertx: Vertx?, context: Context?) {
         super.init(vertx, context)
         println("Deployed EventBusConsumerVerticle $instanceId")
-
     }
 
     override fun start(startPromise: Promise<Void>?) {
